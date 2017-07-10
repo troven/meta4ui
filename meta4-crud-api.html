@@ -1,0 +1,218 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+<script src="../bower_components/zepto/zepto.min.js"></script>
+
+<dom-module id="meta4-crud-api">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+    </style>
+
+    <script>
+
+
+        (function() {
+            var _isEmpty = function(obj) {
+                return !obj || ( Object.keys(obj).length === 0 && obj.constructor === Object );
+            }
+
+            Polymer({
+                is: 'meta4-crud-api',
+                properties: {
+                    debug: {
+                        type: Boolean,
+                        value: false
+                    },
+                    url: {
+                        type: String
+                    },
+                    token: {
+                        notify: true,
+                        type: Object,
+                        readonly: true
+                    },
+                    local: {
+                        notify: true,
+                        type: Object
+                    },
+                    xhr: {
+                        type: Object,
+                        notify: true,
+                        readOnly: true
+                    }
+                },
+                observers: [
+                    "tokenChanged(token)",
+                    "urlChanged(url)",
+                    "localDataChanged(local)"
+                ],
+                _sanitizeHeaders: function(headers) {
+                    var headers = headers || this.headers;
+                    for (header in headers) {
+                        headers[header] = this.headers[header].toString();
+                    }
+                },
+                ready: function() {
+                    this.set("local", this.local || [] );
+                    this.defineEvents();
+                },
+                defineEvents: function() {
+                    var self = this;
+                    this.addEventListener("create", function(event) { self.create(event.detail) });
+                    this.addEventListener("read", function(event) { self.read(event.detail) });
+                    this.addEventListener("update", function(event) { self.update(event.detail) });
+                    this.addEventListener("delete", function(event) { self.delete(event.detail) });
+                    this.addEventListener("onfocus", function(event) {
+                        console.log("on-focus")
+                    });
+                    this.addEventListener("focus", function(event) {
+                        console.log("got-focus")
+                    });
+                },
+                notify: function() {
+                    var self = this;
+                    var args = arguments;
+                    var children = self.childNodes;
+                    console.log("notify: %o -> %o", arguments, children);
+                    children.forEach(function(child) {
+                        child.fire && child.fire.apply(self, args);
+                    })
+                },
+
+                localDataChanged: function(items) {
+                    console.log("Local Data Changed: %s -> %o ", this.url, items);
+                },
+                tokenChanged: function(token) {
+                    // console.log("Token Changed: %o", token);
+                    token && this.read();
+                },
+                urlChanged: function(url) {
+                    console.log("URL changed: %o", this.url, url);
+                },
+
+                // CRUD
+
+                create: function(model) {
+                    if (!model) throw new Error("empty create");
+                    var self = this;
+                    this.debug && console.log("create: %o", model);
+                    this.doPost(model).then(function(r) {
+                        console.log("created: %o -> %o", model, r);
+                        self.notify("saved", r);
+                        self.notify("created", r);
+                    })
+                },
+                read: function() {
+                    var self = this;
+                    var requested = this.doGet.apply(this, arguments);
+
+                    requested.then(function(r) {
+                        self.set("local",r);
+                    });
+
+                },
+                update: function(model) {
+                    if (!model) throw new Error("empty update");
+                    var self = this;
+                    this.debug && console.log("update: %o", model);
+                    this.doPut(model).then(function(r) {
+                        console.log("updated: %o -> %o", model, r);
+                        self.notify("saved", r);
+                        self.notify("updated", r);
+                    })
+                },
+                delete: function(model) {
+                    if (!model) throw new Error("empty delete");
+                    var self = this;
+                    this.debug && console.log("delete: %o", model);
+                    this.doDelete(model).then(function(r) {
+                        console.log("deleted: %o -> %o", model, r);
+                        self.notify("deleted", r);
+                    })
+                },
+
+                ajaxRequest: function(cmd) {
+                    var self = this;
+                    var promise = new Promise(function(resolve, reject) {
+                        var ajax = { type: cmd.type, url: cmd.url, headers: {} };
+
+                        if (cmd.data) {
+                            ajax.data = JSON.stringify(cmd.data)
+                        }
+                        if (cmd.token) {
+                            ajax.headers.Authorization = "BEARER " + cmd.token;
+                        }
+                        ajax.success = resolve;
+                        ajax.error = function(xhr, err, msg) {
+                            console.error("AJAX Error: %o", arguments);
+                            if (xhr.responseJSON) {
+                                var txt = "["+xhr.responseJSON.code+"] "+xhr.responseJSON.error;
+                                alert(txt +" @ "+cmd.url);
+                            } else {
+                                console.error("ERROR GetMany: %o", arguments);
+                                alert("ERROR: "+msg +" @ "+cmd.url);
+                            }
+                            reject.apply(self, arguments);
+                        }
+
+                        this.debug && console.log("ajaxRequest[%s]: %o -> %o", cmd.type, cmd.url, ajax);
+                        $.ajax(ajax);
+                    });
+
+                    return promise;
+                },
+
+                // HTTP METHODS
+
+                doGet: function(id) {
+                    if (!this.url) {
+                        console.log("get: %o -> %o", this.url?this.url:"no url", this.token?this.token:"no token");
+                        return;
+                    }
+                    if (!_isEmpty(id)) {
+                        return this.doGetOne(id);
+                    }
+
+                    return this.doGetMany();
+                },
+
+                doGetOne: function(id) {
+                    var self = this;
+                    this.debug && console.log("get-one: %o -> %o", this.url?this.url:"no url", this.token?this.token:"no token");
+
+                    var request = this.ajaxRequest({ type: "GET", url: this.url+id, token: this.token });
+                    return request;
+                },
+
+                doGetMany: function() {
+                    var self = this;
+                    this.started = new Date().getTime();
+                    this.debug && console.log("get-many: %o -> %o -> %o", this.url, this.token, this.started);
+                    var request = this.ajaxRequest({ type: "GET", url: this.url, token: this.token });
+                    return request;
+                },
+
+                doPost: function(item) {
+                    return this.ajaxRequest({ type: "POST", url: this.url, token: this.token, data: item });
+                },
+
+                doPut: function(item) {
+                    var requested = this.ajaxRequest({ type: "PUT", url: this.url, token: this.token, data: item });
+                    return requested;
+                },
+
+                doDelete: function(item) {
+                    var self = this;
+                    var requested = this.ajaxRequest({ type: "DELETE", url: this.url, token: this.token, data: item });
+                    return requested;
+                }
+            });
+        }());
+    </script>
+</dom-module>

@@ -1,0 +1,96 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+
+<script src="../bower_components/keycloak/dist/keycloak.js"></script>
+
+<dom-module id="meta4-keycloak">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+    </style>
+    <template>
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-keycloak',
+                properties: {
+                    debug: {
+                        type: Boolean,
+                        value: true
+                    },
+                    auto: {
+                        type: Boolean,
+                        value: false
+                    },
+                    keycloakUrl: {
+                        type: String
+                    },
+                    token: {
+                        type: Object,
+                        notify: true
+                    },
+                    profile: {
+                        type: Object,
+                        notify: true
+                    }
+                },
+                ready: function() {
+                    var self = this;
+                    this.id = this.id || this.provider;
+                    if (!this.id) throw new Error("missing id/provider");
+                    this.set("keycloakUrl", this.keycloakUrl || "../idp/keycloak.json" );
+
+                    if (!this.keycloakUrl) throw new Error("missing keycloak-url");
+
+                    this.keycloak = Keycloak(this.keycloakUrl);
+                    this.keycloak.init();
+                    this.keycloak.onAuthSuccess = function() {
+                        console.warn("keycloak token: %o", self.keycloak);
+                        self.set("token", self.keycloak.token);
+                        self.set("profile", self.keycloak.tokenParsed);
+                    };
+
+
+                    if (this.auto) {
+                        Polymer.RenderStatus.afterNextRender(this, function() {
+                            self.login();
+                        });
+                    }
+
+                },
+                login: function() {
+                    var self = this;
+
+                    if (!this.keycloak.authenticated) {
+                        console.log("authenticating ...: %o", this.keycloak);
+                        this.keycloak.init().success(function(authenticated) {
+                            if (!authenticated) self.keycloak.login();
+                            console.log("authenticated: %o", authenticated);
+                        });
+                    }
+                },
+
+                getCurrentLocation: function() {
+                    var url = window.location.href;
+                    var hash = url.indexOf("#");
+                    return url.substring(0, hash>0?hash:url.length);
+                },
+                logout: function() {
+                    console.log("onLogout");
+                    this.keycloak.logout();
+                    this.fire("logout");
+//                    window.location = this.getCurrentLocation();
+                }
+            });
+        }());
+    </script>
+</dom-module>

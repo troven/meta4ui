@@ -1,0 +1,66 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-form/iron-form.html">
+<link rel="import" href="../bower_components/iron-list/iron-list.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-toolbar/paper-toolbar.html">
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/iron-autogrow-textarea/iron-autogrow-textarea.html">
+<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-datatable/paper-datatable.html">
+<link rel="import" href="../bower_components/paper-datatable/paper-datatable-card.html">
+<link rel="import" href="../bower_components/neon-animation/neon-animated-pages.html">
+<link rel="import" href="../bower_components/neon-animation/neon-animatable.html">
+
+<dom-module id="meta4-properties">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+    </style>
+    <template>
+
+        <meta4-crud id="meta4-properties-crud" nested header="{{header}}" edit-header="Property: {{item.name}}" page-size="10" items="{{items}}" item="{{item}}" id-property="name"">
+            <paper-datatable-column meta4-master width="30%" header="Name" property="name" type="String" tooltip="A Property Name" sortable></paper-datatable-column>
+            <paper-datatable-column meta4-master width="65%" header="Value" editable property="value" type="String" tooltip="A Property Value" sortable></paper-datatable-column>
+            <paper-datatable-column meta4-master width="5%"  header="Encrypted" property="value" type="Boolean" tooltip="An Encrypted Property" sortable></paper-datatable-column>
+            <form is="iron-form" meta4-detail>
+                <paper-checkbox name="encrypted" checked="{{item.encrypted}}">Encrypted</paper-checkbox>
+                <paper-input name="name" autofocus label="Name" value="{{item.name}}"></paper-input>
+                <paper-input name="value" label="Value" value="{{item.value}}"></paper-input>
+                <br/>
+            </form>
+        </meta4-crud>
+
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-properties',
+                properties: {
+                    items: {
+                        type: Object,
+                        value: {}
+                    },
+                    item: {
+                        type: Object
+                    },
+                    header: {
+                        type: String,
+                        value: "Properties"
+                    }
+                },
+
+                ready: function() {
+                    this.set("items", this.items || {} );
+                    console.log("Properties: %s", this.header);
+                }
+            });
+        }());
+    </script>
+</dom-module>

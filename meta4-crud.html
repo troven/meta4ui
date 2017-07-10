@@ -1,0 +1,305 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-list/iron-list.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-toolbar/paper-toolbar.html">
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/iron-autogrow-textarea/iron-autogrow-textarea.html">
+<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-datatable/paper-datatable.html">
+<link rel="import" href="../bower_components/paper-datatable/paper-datatable-card.html">
+<link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-icons/editor-icons.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
+
+<link rel="import" href="../ux/shared-styles.html">
+
+<dom-module id="meta4-crud">
+	<template>
+		<style include="shared-styles">
+			:host {
+				display: block;
+				padding: 10px;
+			}
+
+            .pad {
+                margin-top: 16px;
+                margin-bottom: 16px;
+            }
+
+            .margins {
+                margin-left: 32px;
+                margin-right: 32px;
+            }
+            .clearfix {
+                clear: both;
+                display: block;
+            }
+
+            .pull-left {
+                float: left;
+            }
+            .pull-right {
+                float: right;
+            }
+
+            paper-toast {
+                z-index: 20000;
+                background: var(--default-primary-color);
+            }
+		</style>
+
+        <iron-pages id='crud_pages' attr-for-selected="name" fallback-selection="master">
+
+            <paper-material name="master">
+                <paper-datatable-card id="crud_card" header="{{header}}" page-size="10" data-source="{{dataSource}}" id-property="{{idProperty}}" selected-ids="{{selected}}">
+                    <div toolbar-main class='pull-right'>
+                        <paper-icon-button hidden$="{{nested}}" raised on-tap="reload" label="Reload" icon="icons:refresh"></paper-icon-button>
+                        <paper-icon-button hidden$="{{readOnly}}" raised on-tap="create" label="Create" icon="icons:add"></paper-icon-button>
+                    </div>
+
+                    <div toolbar-select-single>
+                        <paper-icon-button hidden$="{{readOnly}}" raised on-tap="edit" label="Edit" icon="editor:mode-edit"></paper-icon-button>
+                        <paper-icon-button hidden$="{{readOnly}}" raised on-tap="delete"  icon="delete"></paper-icon-button>
+                    </div>
+
+                    <paper-datatable id="crud_table" selectable="{{selectable}}">
+                        <content select="[meta4-master]"></content>
+                    </paper-datatable>
+
+                </paper-datatable-card>
+            </paper-material>
+
+            <paper-material name="edit">
+                <paper-toolbar toolbar-main header="{{header}}">
+                    <paper-icon-button raised on-tap="back" icon="chevron-left"></paper-icon-button>
+                    <div class="title">{{editHeader}}</div>
+                    <paper-icon-button hidden$="{{readOnly}}" on-tap="delete"  icon="delete"></paper-icon-button>
+                    <paper-icon-button hidden$="{{readOnly}}" raised on-tap="save" icon="save"></paper-icon-button>
+                </paper-toolbar>
+                <div id="crud_edit" class="margins pad" on-keydown="checkForEnter">
+                    <content select="[meta4-detail]"></content>
+                </div>
+                <br/>
+            </paper-material>
+
+            <paper-material name="delete" class="pad">
+                <h2 class="margins pad">Delete {{item.name}} ?</h2>
+                <paper-toolbar>
+                    <paper-button raised on-tap="confirmDelete" label="Delete" icon="editor:mode-delete">Delete</paper-button>
+                    <paper-button raised class='pull-right' on-tap="cancelDelete" label="Cancel" icon="editor:mode-cancel">Cancel</paper-button>
+                </paper-toolbar>
+            </paper-material>
+
+        </iron-pages>
+
+        <paper-toast id="notifications" text="nothing"></paper-toast>
+	</template>
+
+	<script>
+		(function() {
+			Polymer({
+                is: 'meta4-crud',
+                properties: {
+                    selectable: {
+                        type: Boolean,
+                        value: true
+                    },
+                    saveOnEnter: {
+                        type: Boolean,
+                        value: false
+                    },
+                    items: {
+                        type: Array,
+                        notify: true,
+                        observer: "itemsChanged",
+                        value: []
+                    },
+                    idProperty: {
+                        type: String,
+                        value: "_key"
+                    },
+                    selected: {
+                        type: Object,
+                        observer: "selectionChanged"
+                    },
+                    item: {
+                        notify: true,
+                        observer: "itemChanged",
+                        type: Object
+                    },
+                    dataSource: {
+                        type: Object
+                    },
+                    selectedIds: {
+                        type: Object
+                    },
+                    nested: {
+                        type: Boolean,
+                        value: false
+                    },
+                    readOnly: {
+                        type: Boolean,
+                        value: false
+                    }
+                },
+
+                ready: function () {
+                    var self = this;
+                    this.set("selectable", this.selectable?"selectable":"");
+                    this.set("returnOnSave", this.get("nested")?true:false );
+
+                    this.dataSource = new DataSource({ idProperty: this.idProperty });
+                    this.dataSource.refresh(this.items);
+                    this.defineEvents();
+
+                    console.log("CRUD Ready: %o -> %o -> %o", this, this.idProperty, this.items);
+                },
+
+                defineEvents: function() {
+                    var self = this;
+
+                    this.addEventListener("saved", function(event) {
+console.log("on-saved: %o", event);
+                        self.saved(event.detail);
+                    });
+                    this.addEventListener("deleted", function(event) {
+                        console.log("on-deleted: %o", event);
+                        self.read();
+                    });
+                },
+
+                checkForEnter: function(e) {
+                    if (this.saveOnEnter && e.keyCode === 13) {
+                        this.save();
+                        this.master();
+                    }
+                },
+
+                getSelected: function (id) {
+                    var id = id || this.selected[0];
+                    if (!id) return false;
+                    var item = this.dataSource.find(id);
+                    return item;
+                },
+
+                create: function () {
+                    this.$.crud_pages.selected = "edit";
+                    this.item = {};
+                    this.items.push(this.item);
+                    console.log("create: %o", this.item);
+                    this.master();
+                },
+
+                edit: function () {
+                    this.$.crud_pages.selected = "edit";
+                    var id = this.selected[0];
+                    var item = this.getSelected(id);
+console.log("edit: %o -> %o", item, arguments);
+                    if (item) {
+                        this.set("item", item || {} );
+                    }
+                },
+
+                back: function () {
+                    this.master();
+                },
+
+                save: function () {
+                    var self = this;
+                    if (!this.item) throw new Error("Can't save an undefined item");
+                    var id = this.item[this.idProperty];
+console.log("save: %s -> %o", id, this.item);
+                    if (!this.nested) {
+                        if (id) this.fire("update", this.item );
+                        else this.fire("create", this.item  );
+                    } else {
+                        this.fire("save", this.item  );
+                    }
+                    if (this.returnOnSave) {
+                        this.master();
+                    }
+                },
+
+                delete: function() {
+                    this._predelete_selection = this.$.crud_pages.selected;
+                    this.$.crud_pages.selected = "delete";
+                },
+
+                cancelDelete: function() {
+                    this.$.crud_pages.selected = this._predelete_selection || "master";
+                    console.log("cancelDelete");
+                },
+
+                confirmDelete: function() {
+                    this.$.crud_pages.selected = this._predelete_selection || "master";
+                    var id = this.selected[0];
+                    console.log("confirmDelete: %o -> %o", id, this.item);
+                    this.fire("delete", this.item );
+                    this.master();
+                },
+
+                saved: function() {
+                    console.log("Saved: %o -> %o",this, this.$.crud_card);
+                    this.master();
+                    this.toast("item has been saved")
+                },
+
+                master: function () {
+                    console.log("crud master");
+                    this.$.crud_card.retrieveVisibleData();
+                    this.$.crud_pages.set("selected", "master");
+//                  this.$.crud_card.deselectAll();
+                },
+
+                detail: function (item) {
+                    if (!item) return;
+                    console.log("crud detail");
+                    this.$.crud_card.deselectAll();
+                    this.set("selected", item);
+                    this.$.crud_pages.set("selected", "detail");
+                },
+
+                selectionChanged: function() {
+                    console.log("crud selected: %o", arguments);
+                },
+
+                toast: function(txt) {
+                    this.$.notifications.text = txt;
+                    this.$.notifications.show();
+                },
+
+                onSelect: function (e, selected) {
+                    console.log("onSelect: %o -> %o", this, selected);
+                    this.detail(selected.item);
+                },
+
+                reload: function () {
+                    this.fire("read");
+                },
+
+                itemsChanged: function (items, args) {
+                    if (!this.dataSource) {
+                        console.log("itemsChanged: not-ready");
+                        return;
+                    }
+                    if (!items) {
+                        console.log("itemsChanged: no-items");
+                        return;
+                    }
+                    console.log("itemsChanged: %o -> %o", items, args);
+                    this.dataSource.refresh(items);
+                    this.$.crud_card.retrieveVisibleData();
+                },
+                itemChanged: function (item, args) {
+                    this.set("item", item);
+                    console.log("itemChanged: %o -> %o", item, args);
+                }
+
+            });
+		}());
+	</script>
+</dom-module>

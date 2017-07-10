@@ -1,0 +1,95 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+<link rel="import" href="../ux/shared-styles.html">
+
+<dom-module id="meta4-me">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+        .horizontal-padding {
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+    </style>
+    <template>
+
+        <div class="horizontal-padding">
+            <paper-button hidden$="{{is_logged_in}}" on-tap="login">{{label-login}}</paper-button>
+
+			<div hidden$="{{!is_logged_in}}" >
+				<paper-menu-button>
+					<paper-icon-button icon="menu" class="dropdown-trigger"></paper-icon-button>
+					<paper-menu class="dropdown-content" on-iron-select="onSelect">
+						<paper-item value="profile">Profile</paper-item>
+						<paper-item value="settings">Settings</paper-item>
+						<paper-item value="support">Support</paper-item>
+						<paper-item value="logout">Logout</paper-item>
+					</paper-menu>
+				</paper-menu-button>
+                <paper-label>{{profile.name}}</paper-label>
+			</div>
+        </div>
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-me',
+                has_ever_logged_in: false,
+                labelLogin: "Login",
+                labelLogout: "Logout",
+                labelProfile: "Profile",
+                properties: {
+                    debug: {
+                        type: Boolean
+                    },
+                    profile: {
+                        type: Object,
+                        observer: "profileChanged"
+                    },
+                    is_logged_in: {
+                        type: Boolean,
+                        value: false
+                    },
+                },
+                ready: function() {
+                },
+                onLogin: function() {
+                    this.is_logged_in = true;
+                    this.has_ever_logged_in = true;
+                    console.log("onLogin")
+                    this.fire("login");
+                },
+                onLogout: function() {
+                    this.is_logged_in = false;
+                    console.log("onLogout");
+                    this.fire("logout");
+                },
+				isLoggedIn: function() {
+					if (!this.profile || !this.profile.name) return false;
+					return true;
+				},
+                profileChanged: function(profile) {
+                    this.is_logged_in = profile?true:false;
+                    this.has_ever_logged_in = true;
+                    console.log("me: %o -> %o", profile, this.isLoggedIn() );
+                },
+                onSelect: function(event, selected) {
+                    var value = selected.item.getAttribute("value");
+                    if (value) {
+                        console.log("Menu Selected: %o", value);
+                        this.fire(value);
+                        this[value] && this[value]();
+                    }
+                }
+            });
+        }());
+    </script>
+</dom-module>

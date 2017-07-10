@@ -1,0 +1,103 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-form/iron-form.html">
+<link rel="import" href="../bower_components/iron-list/iron-list.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-toolbar/paper-toolbar.html">
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/iron-autogrow-textarea/iron-autogrow-textarea.html">
+<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/paper-datatable/paper-datatable.html">
+<link rel="import" href="../bower_components/paper-datatable/paper-datatable-card.html">
+<link rel="import" href="../bower_components/neon-animation/neon-animated-pages.html">
+<link rel="import" href="../bower_components/neon-animation/neon-animatable.html">
+
+<dom-module id="meta4-version">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+        .pull-right {
+            float: right;
+        }
+        .pull-left {
+            float: left;
+        }
+        .clearfix {
+            clear: both;
+        }
+    </style>
+    <template>
+
+        <div>
+            <paper-input width="30%" id="version" class="pull-right" name="version" label="{{label}}" value="{{item.version}}" readonly></paper-input>
+            <paper-dropdown-menu class="pull-left" label="Next Version">
+                <paper-listbox id="next_version" class="dropdown-content" selected="{{next_version}}" on-iron-select="onNextVersion">
+                    <paper-item>patch</paper-item>
+                    <paper-item>minor</paper-item>
+                    <paper-item>major</paper-item>
+                </paper-listbox>
+            </paper-dropdown-menu>
+            <div class="clearfix"></div>
+        </div>
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-version',
+                properties: {
+                    label: {
+                        type: String,
+                        value: "Current Version"
+                    },
+                    item: {
+                        type: Object,
+                        value: {
+                            version: "0.0.0"
+                        }
+                    },
+                    original_value: {
+                        type: String
+                    }
+                },
+
+                ready: function() {
+                    this.original_value = this.item.version || this.original_value || "0.0.0";
+                    var new_version = (this.item.version != this.original_value);
+
+                    this.set("item.version", this.original_value);
+                    if (new_version) this.onNextVersion();
+
+                },
+
+                onNextVersion: function(e,s) {
+                    var version = this.original_value = this.original_value || this.item.version;
+                    var vers = version.split(".");
+
+                    switch(this.$.next_version.selected) {
+                        case 0:
+                            vers[2]++;
+                            break;
+                        case 1:
+                            vers[1]++;
+                            vers[2]=0;
+                            break;
+                        case 2:
+                            vers[0]++;
+                            vers[1]=0;
+                            vers[2]=0;
+                            break;
+                    }
+                    this.set("item.version", vers.join("."));
+                    console.log("onNextVersion: %o", version, vers);
+                    this.label = "Next Version";
+                }
+            });
+        }());
+    </script>
+</dom-module>

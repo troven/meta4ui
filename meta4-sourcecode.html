@@ -1,0 +1,90 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/iron-form/iron-form.html">
+<link rel="import" href="../bower_components/iron-list/iron-list.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../bower_components/ace-widget/ace-widget.html">
+
+<dom-module id="meta4-sourcecode">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+        .pull-right {
+            float: right;
+        }
+    </style>
+    <template>
+
+        <div>
+            <paper-dropdown-menu class="pull-right" name="sourceLangauge" label="Source Format" on-iron-select="onChangeSourceLanguage">
+                <paper-listbox class="dropdown-content" value="{{sourceLangauge}}">
+                    <paper-item language="groovy">Groovy</paper-item>
+                    <paper-item language="handlebars">Handlebars</paper-item>
+                    <paper-item language="html">HTML</paper-item>
+                    <paper-item language="java">Java</paper-item>
+                    <paper-item language="javascript">Javascript</paper-item>
+                    <paper-item language="json">JSON</paper-item>
+                    <paper-item language="markdown">Markdown</paper-item>
+                    <paper-item language="python">Python</paper-item>
+                    <paper-item language="r">R</paper-item>
+                    <paper-item language="ruby">Ruby</paper-item>
+                    <paper-item language="rust">Rust</paper-item>
+                    <paper-item language="R">R</paper-item>
+                    <paper-item language="sql">SQL</paper-item>
+                    <paper-item language="svg">SVG</paper-item>
+                    <paper-item language="text">Text</paper-item>
+                    <paper-item language="typescript">Typescript</paper-item>
+                    <paper-item language="xml">XML</paper-item>
+                    <paper-item language="yaml">YAML</paper-item>
+                </paper-listbox>
+            </paper-dropdown-menu>
+
+            <ace-widget placeholder="{{placeholder}}" enableSnippets="false"
+                        enableLiveAutocompletion="false" mode="ace/mode/{{sourceLangauge}}">
+            </ace-widget>
+
+        </div>
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-sourcecode',
+                properties: {
+                    placeholder: {
+                        type: String,
+                        value: "Type something"
+                    },
+                    sourceLangauge: {
+                        type: String,
+                        value: "text"
+                    },
+                    item: {
+                        type: Object
+                    },
+                    header: {
+                        type: String,
+                        value: "Properties"
+                    }
+                },
+
+                ready: function() {
+                    this.set("items", this.items || {} );
+                    console.log("Properties: %s", this.header);
+                },
+
+                onChangeSourceLanguage: function(e, selected) {
+                    var v = $(selected.item).attr("source-langauge");
+                    this.sourceLangauge = v;
+                    console.log("onChangeSourceLanguage: %o -> %o", selected.item, v);
+                }
+            });
+        }());
+    </script>
+</dom-module>
