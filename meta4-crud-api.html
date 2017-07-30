@@ -1,10 +1,11 @@
-<link rel="import" href="../bower_components/polymer/polymer.html">
-<link rel="import" href="../bower_components/paper-item/paper-item.html">
-<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/paper-button/paper-button.html">
-<link rel="import" href="../bower_components/paper-menu/paper-menu.html">
-<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
-<script src="../bower_components/zepto/zepto.min.js"></script>
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-item/paper-item.html">
+<link rel="import" href="/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="/bower_components/paper-menu-button/paper-menu-button.html">
+<script src="/bower_components/zepto/zepto.min.js"></script>
+<script src="/bower_components/lodash/lodash.min.js"></script>
 
 <dom-module id="meta4-crud-api">
     <style>
@@ -29,7 +30,14 @@
                         type: Boolean,
                         value: false
                     },
+                    auto: {
+                        type: Boolean,
+                        value: false
+                    },
                     url: {
+                        type: String
+                    },
+                    idProperty: {
                         type: String
                     },
                     token: {
@@ -38,6 +46,10 @@
                         readonly: true
                     },
                     local: {
+                        notify: true,
+                        type: Object
+                    },
+                    dataSource: {
                         notify: true,
                         type: Object
                     },
@@ -60,40 +72,67 @@
                 },
                 ready: function() {
                     this.set("local", this.local || [] );
-                    this.defineEvents();
-                },
-                defineEvents: function() {
-                    var self = this;
-                    this.addEventListener("create", function(event) { self.create(event.detail) });
-                    this.addEventListener("read", function(event) { self.read(event.detail) });
-                    this.addEventListener("update", function(event) { self.update(event.detail) });
-                    this.addEventListener("delete", function(event) { self.delete(event.detail) });
+                    this.idProperty = this.idProperty?this.idProperty:"_id";
+
+                    this.dataSource = new DataSource({ id: this.url, idProperty: this.idProperty, debug: this.debug });
+
+                    this.set("dataSource", this.dataSource);
+
+                    console.log("API ready: %o -> %s [%s] -> %o", this.url, this.idProperty?this.idProperty:false, this.auto?"auto":"manual", this.dataSource);
+                    if (this.dataSource && !this.dataSource.refresh) {
+                        throw "DataSource Error";
+                    }
+
+                    this.listenForCrudEvents();
                     this.addEventListener("onfocus", function(event) {
-                        console.log("on-focus")
+                        console.log("on-focus");
                     });
                     this.addEventListener("focus", function(event) {
-                        console.log("got-focus")
+                        console.log("got-focus");
                     });
+
+//                    this.auto && this.read();
                 },
+
+                listenForCrudEvents: function(that) {
+                    var self = this;
+                    that = that || this;
+
+                    that.addEventListener("create", function(event) { event.stopPropagation(); self.create(event.detail) });
+                    that.addEventListener("read", function(event) { event.stopPropagation(); self.read(event.detail) });
+                    that.addEventListener("update", function(event) { event.stopPropagation(); self.update(event.detail) });
+                    that.addEventListener("save", function(event) { event.stopPropagation(); self.save(event.detail) });
+                    that.addEventListener("delete", function(event) { event.stopPropagation(); self.delete(event.detail) });
+                },
+
                 notify: function() {
                     var self = this;
                     var args = arguments;
                     var children = self.childNodes;
-                    console.log("notify: %o -> %o", arguments, children);
+                    // console.log("notify: %o -> %o", arguments, children);
                     children.forEach(function(child) {
                         child.fire && child.fire.apply(self, args);
                     })
                 },
 
                 localDataChanged: function(items) {
-                    console.log("Local Data Changed: %s -> %o ", this.url, items);
+                    if (this.dataSource && this.dataSource.refresh) {
+                        this.dataSource.refresh(items);
+                        console.warn("[r]localDataChanged: %s -> %o -> %o", this.url, items, this.dataSource);
+                    } else {
+                        this.set("local", items);
+                        // console.log("[-]localDataChanged: %s -> %o -> %o", this.url, items, this.dataSource);
+                    }
                 },
+
                 tokenChanged: function(token) {
                     // console.log("Token Changed: %o", token);
-                    token && this.read();
+                    token && this.auto && this.read();
                 },
+
                 urlChanged: function(url) {
-                    console.log("URL changed: %o", this.url, url);
+                    this.debug && console.log("URL changed: %o", this.url, url);
+                    url && this.auto && this.read();
                 },
 
                 // CRUD
@@ -101,40 +140,72 @@
                 create: function(model) {
                     if (!model) throw new Error("empty create");
                     var self = this;
-                    this.debug && console.log("create: %o", model);
-                    this.doPost(model).then(function(r) {
+                    this.debug && console.warn("api create: %o", model);
+                    var requested = this.doPost(model);
+
+                    requested.then(function(r) {
                         console.log("created: %o -> %o", model, r);
                         self.notify("saved", r);
                         self.notify("created", r);
-                    })
+                    });
+
+                    return requested;
                 },
+
                 read: function() {
                     var self = this;
                     var requested = this.doGet.apply(this, arguments);
-
-                    requested.then(function(r) {
-                        self.set("local",r);
-                    });
+                    requested.then(function(r) { self.set("local",r) });
+                    return requested;
 
                 },
+
                 update: function(model) {
                     if (!model) throw new Error("empty update");
                     var self = this;
-                    this.debug && console.log("update: %o", model);
-                    this.doPut(model).then(function(r) {
+                    this.debug && console.warn("api update: %o", model);
+                    var requested = this.doPut(model);
+
+                    requested.then(function(r) {
                         console.log("updated: %o -> %o", model, r);
                         self.notify("saved", r);
                         self.notify("updated", r);
-                    })
+                    });
+
+                    return requested;
                 },
+
                 delete: function(model) {
                     if (!model) throw new Error("empty delete");
                     var self = this;
-                    this.debug && console.log("delete: %o", model);
-                    this.doDelete(model).then(function(r) {
+                    this.debug && console.warn("api delete: %o", model);
+                    var requested = this.doDelete(model);
+
+                    requested.then(function(r) {
                         console.log("deleted: %o -> %o", model, r);
                         self.notify("deleted", r);
-                    })
+                    });
+
+                    return requested;
+                },
+
+                save: function(model) {
+                    if (!model) throw new Error("empty save");
+                    var self = this;
+                    this.debug && console.warn("api save: %o", model);
+                    var requested = false;
+                    if (model._key) {
+                        requested = this.update(model);
+                    } else {
+                        requested = this.create(model);
+                    }
+
+                    requested.then(function(r) {
+                        console.log("saved: %o -> %o", model, r);
+                        self.notify("saved", r);
+                    });
+
+                    return requested;
                 },
 
                 ajaxRequest: function(cmd) {
@@ -143,25 +214,28 @@
                         var ajax = { type: cmd.type, url: cmd.url, headers: {} };
 
                         if (cmd.data) {
-                            ajax.data = JSON.stringify(cmd.data)
+                            ajax.data = cmd.data
                         }
-                        if (cmd.token) {
+                        var token = this.token || cmd.access_token;
+                        if (token) {
                             ajax.headers.Authorization = "BEARER " + cmd.token;
                         }
                         ajax.success = resolve;
                         ajax.error = function(xhr, err, msg) {
-                            console.error("AJAX Error: %o", arguments);
+                            reject.apply(self, arguments);
+
                             if (xhr.responseJSON) {
-                                var txt = "["+xhr.responseJSON.code+"] "+xhr.responseJSON.error;
-                                alert(txt +" @ "+cmd.url);
+                                var error = xhr.responseJSON;
+                                self.debug && console.error("CRUD error: %o", error);
+                                var message = error.errorMessage;
+                                alert(message);
                             } else {
-                                console.error("ERROR GetMany: %o", arguments);
+                                self.debug && console.error("ERROR GetMany: %o", arguments);
                                 alert("ERROR: "+msg +" @ "+cmd.url);
                             }
-                            reject.apply(self, arguments);
                         }
 
-                        this.debug && console.log("ajaxRequest[%s]: %o -> %o", cmd.type, cmd.url, ajax);
+                        self.debug && console.log("ajax request[%s]: %o -> %o", cmd.type, cmd.url, ajax);
                         $.ajax(ajax);
                     });
 
@@ -175,11 +249,12 @@
                         console.log("get: %o -> %o", this.url?this.url:"no url", this.token?this.token:"no token");
                         return;
                     }
-                    if (!_isEmpty(id)) {
+                    if (!id || _.isObject(id)) {
+                        return this.doGetMany(id);
+                    }
+                    if (_.isString(id)) {
                         return this.doGetOne(id);
                     }
-
-                    return this.doGetMany();
                 },
 
                 doGetOne: function(id) {
@@ -190,25 +265,31 @@
                     return request;
                 },
 
-                doGetMany: function() {
+                doGetMany: function(queryParams) {
                     var self = this;
                     this.started = new Date().getTime();
-                    this.debug && console.log("get-many: %o -> %o -> %o", this.url, this.token, this.started);
-                    var request = this.ajaxRequest({ type: "GET", url: this.url, token: this.token });
+
+                    this.debug && console.log("get-many: %o -> %o -> %o -> %o", this.url, this.token, this.started, queryParams);
+                    var request = this.ajaxRequest({ type: "GET", url: this.url, token: this.token, data: queryParams });
                     return request;
                 },
 
                 doPost: function(item) {
+                    this.debug && console.log("doPost: %o -> %o -> %o", this.url, this.token, item);
+                    item = JSON.stringify(item);
                     return this.ajaxRequest({ type: "POST", url: this.url, token: this.token, data: item });
                 },
 
                 doPut: function(item) {
-                    var requested = this.ajaxRequest({ type: "PUT", url: this.url, token: this.token, data: item });
+                    this.debug && console.log("doPut: %o -> %o -> %o", this.url, this.token, item);
+                    item = JSON.stringify(item);
+                    var requested = this.ajaxRequest({ type: "PUT", url: this.url, token: this.token, dataType: "json", data: item });
                     return requested;
                 },
 
                 doDelete: function(item) {
-                    var self = this;
+                    this.debug && console.log("doDelete: %o -> %o -> %o", this.url, this.token, item);
+                    item = JSON.stringify(item);
                     var requested = this.ajaxRequest({ type: "DELETE", url: this.url, token: this.token, data: item });
                     return requested;
                 }

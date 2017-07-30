@@ -1,0 +1,149 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-item/paper-item.html">
+<link rel="import" href="/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-input/paper-input.html">
+<link rel="import" href="/bower_components/paper-progress/paper-progress.html">
+<link rel="import" href="/bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="/bower_components/iron-icons/iron-icons.html">
+<script src="/bower_components/zepto/zepto.min.js"></script>
+<script src="/bower_components/lodash/lodash.min.js"></script>
+<script src="ajax-request.js"></script>
+
+<dom-module id="meta4-upload">
+    <template>
+
+        <style>
+            :host {
+                display: block;
+                padding: 0px;
+            }
+            .pull-left {
+                float: left;
+            }
+            .clickable {
+                cursor: pointer;
+            }
+            .cf:before,
+            .cf:after {
+                content: " "; /* 1 */
+                display: table; /* 2 */
+            }
+            .cf:after {
+                clear: both;
+            }
+            ul {
+                list-style: none;
+            }
+        </style>
+
+        <div class="cf">
+            <span class="upload-control pull-left">
+                <paper-progress id="progress" disabled indeterminate class="slow"></paper-progress>
+                <paper-input id="picker" width='30%' name="{{name}}" label="{{label}}" type="file" on-change="_handleFiles"></paper-input>
+            </span>
+
+            <ul class="upload-browser pull-left">
+                <template is="dom-repeat" items="{{items}}">
+                <li>
+                    <a title="[[item.collection]]: [[item.originalname]] [ [[item.mimetype]] ]" target='_blank' href="[[item.path]]?type=download">[[item.originalname]]</a>
+                    <iron-icon class="clickable" icon="delete" on-tap="deleteAttachment">[x]</iron-icon>
+                </li>
+                </template>
+            </ul>
+
+        </div>
+    </template>
+    <script>
+
+        (function() {
+            Polymer({
+                is: 'meta4-upload',
+                properties: {
+                    debug: { type: Boolean, value: false },
+                    url: { type: String },
+                    item: { type: Object, notify: true },
+                    items: { type: Array, notify: true },
+                    token: { notify: true, type: Object, readonly: true },
+                    xhr: { type: Object, notify: true, readOnly: true }
+                },
+                observers: [
+                    "tokenChanged(token)",
+                    "itemChanged(item)",
+                    "itemsChanged(items)",
+                    "urlChanged(url)"
+                ],
+                ready: function() {
+                    var files = this.item[this.name];
+                    console.log("meta4-upload [%s] ready @ %o -> %o", this.name, this.url, files);
+                    this.set("items", files|| []);
+                },
+                setUploading: function(status) {
+                    if (status) {
+                        this.$.picker.setAttribute("disabled", true);
+                        this.$.progress.removeAttribute("disabled");
+                    } else {
+                        this.$.picker.removeAttribute("disabled");
+                        this.$.progress.setAttribute("disabled", true);
+                    }
+                },
+                _handleFiles(event) {
+                    this.setUploading(true);
+                    var file$ = this.$.picker.inputElement;
+                    console.log("_handleFiles: %o -> %o", event, file$.files);
+                    this.uploadFiles(file$.files[0]);
+                },
+                uploadFiles: function(file) {
+                    var self = this;
+                    var name = this.name || "attachment";
+
+                    var formData = new FormData();
+                    formData.append(name, file);
+//                    formData.append(name+".files", this.files);
+
+                    console.log("uploadFiles: %s-> %o -> %o", name, file, formData);
+                    var request = new AjaxRequest( { data: formData, type: "POST", url: this.url, access_token: this.token });
+
+                    request.then(function(resp) {
+                        if (self.item) {
+                            self.setUploading(false);
+                            self.item[name] = resp.files;
+                            self.set("item", self.item);
+                            self.set("items", self.item[name]);
+                            console.log("uploaded: %s -> %o -> %o", name, resp.files, self.item);
+                        }
+                    }).catch(function() {
+                        self.setUploading(false);
+                        console.log("upload failed: %o", arguments);
+                    });
+                },
+                deleteAttachment: function(event) {
+                    var item = event.model.item;
+                    var files = this.item[name];
+                    var _files = this.item[this.name] = [];
+                    _.each(files, function(_file) {
+                        if (_file.path != item.path) {
+                            _files.push(_file);
+                        }
+                    });
+                    this.set("items", this.item[this.name]);
+                    console.log("deleteAttachment: %o -> %o -> %o -> %o", this.item, _files, event, item);
+                },
+                tokenChanged: function(token) {
+                    console.log("tokenChanged: %o -> %o", this.token, token);
+                },
+                urlChanged: function(url) {
+                    this.debug && console.log("urlChanged: %o -> %o", this.url, url);
+                },
+                itemChanged: function(item) {
+                    console.log("itemChanged: [%s] %o -> %o", this.name, this.item, item);
+                    this.set("items", item[this.name]);
+                },
+                itemsChanged: function(items) {
+                    console.log("itemsChanged: %o -> %o", this.items, items);
+                }
+
+            });
+        }());
+    </script>
+</dom-module>

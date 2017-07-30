@@ -1,11 +1,11 @@
-<link rel="import" href="../bower_components/polymer/polymer.html">
-<link rel="import" href="../bower_components/paper-item/paper-item.html">
-<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/paper-button/paper-button.html">
-<link rel="import" href="../bower_components/paper-menu/paper-menu.html">
-<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-item/paper-item.html">
+<link rel="import" href="/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="/bower_components/paper-menu-button/paper-menu-button.html">
 
-<script src="../bower_components/keycloak/dist/keycloak.js"></script>
+<script src="/bower_components/keycloak/dist/keycloak.js"></script>
 
 <dom-module id="meta4-keycloak">
     <style>
@@ -54,7 +54,7 @@
                     this.keycloak = Keycloak(this.keycloakUrl);
                     this.keycloak.init();
                     this.keycloak.onAuthSuccess = function() {
-                        console.warn("keycloak token: %o", self.keycloak);
+                        self.debug && console.warn("keycloak token: %o", self.keycloak);
                         self.set("token", self.keycloak.token);
                         self.set("profile", self.keycloak.tokenParsed);
                     };
@@ -74,7 +74,7 @@
                         console.log("authenticating ...: %o", this.keycloak);
                         this.keycloak.init().success(function(authenticated) {
                             if (!authenticated) self.keycloak.login();
-                            console.log("authenticated: %o", authenticated);
+                            self.debug && console.log("authenticated: %o", authenticated);
                         });
                     }
                 },
@@ -85,7 +85,7 @@
                     return url.substring(0, hash>0?hash:url.length);
                 },
                 logout: function() {
-                    console.log("onLogout");
+                    this.debug && console.log("onLogout");
                     this.keycloak.logout();
                     this.fire("logout");
 //                    window.location = this.getCurrentLocation();

@@ -1,0 +1,19 @@
+{
+  "name": "meta4ui",
+  "version": "0.5.0",
+  "homepage": "https://github.com/troven/meta4ui",
+  "authors": [
+    "apigeeks<cto@apigeeks.com>"
+  ],
+  "description": "meta4ui web components",
+  "main": "",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {}
+}

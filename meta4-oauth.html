@@ -1,11 +1,11 @@
-<link rel="import" href="../bower_components/polymer/polymer.html">
-<link rel="import" href="../bower_components/paper-item/paper-item.html">
-<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/paper-button/paper-button.html">
-<link rel="import" href="../bower_components/paper-menu/paper-menu.html">
-<link rel="import" href="../bower_components/paper-menu-button/paper-menu-button.html">
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-item/paper-item.html">
+<link rel="import" href="/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="/bower_components/paper-menu-button/paper-menu-button.html">
 
-<script type="text/javascript" src="../bower_components/jso/build/jso.js"></script>
+<script type="text/javascript" src="/bower_components/jso/build/jso.js"></script>
 
 /*
 
@@ -104,7 +104,7 @@ debug: If debug is set to true, verbose logging will make it easier to debug pro
                 },
                 login: function() {
                     var self = this;
-                    console.log("doLogin: %s -> %o", this.id, this.jso);
+                    this.debug && console.log("doLogin: %s -> %o", this.id, this.jso);
                     this.jso.getToken(function(token) {
                         if (token.access_token) {
                             self.set("token", token);
@@ -124,12 +124,12 @@ debug: If debug is set to true, verbose logging will make it easier to debug pro
                 logout: function() {
                     this.jso.wipeTokens();
                     this.is_logged_in = false;
-                    console.log("onLogout: %o", this.jso.checkToken());
+                    this.debug && console.log("onLogout: %o", this.jso.checkToken());
                     this.fire("logout");
 //                    window.location = this.getCurrentLocation();
                 },
                 onProfile: function() {
-                    console.log("onProfile: %o -> %o", this.jso, this.jso.checkToken() );
+                    this.debug && console.log("onProfile: %o -> %o", this.jso, this.jso.checkToken() );
                 }
             });
         }());

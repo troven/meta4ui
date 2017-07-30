@@ -1,0 +1,39 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-item/paper-item.html">
+<link rel="import" href="/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/bower_components/paper-button/paper-button.html">
+<link rel="import" href="/bower_components/paper-menu/paper-menu.html">
+<link rel="import" href="/bower_components/paper-menu-button/paper-menu-button.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="meta4-column-options">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+    </style>
+    <template>
+
+        <iron-pages selected="{{selected}}" attr-for-selected="value" fallback-selection="not-found" role="main">
+            <content select="*"></content>
+            <div name="not-found">n/a</div>
+        </iron-pages>
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-column-options',
+                properties: {
+                    selected: { type: String, value: 0 }
+                },
+                ready: function() {
+                    this.set("selected", this.selected || 0 );
+                    // console.log("meta4-column-options: %s", this.selected);
+                }
+            });
+        }());
+    </script>
+</dom-module>

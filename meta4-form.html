@@ -1,0 +1,102 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/iron-form/iron-form.html">
+<link rel="import" href="/bower_components/paper-toast/paper-toast.html">
+<script src="/bower_components/lodash/lodash.min.js"></script>
+<script src="/bower_components/jquery/dist/jquery.min.js"></script>
+
+<dom-module id="meta4-form">
+    <style>
+        :host {
+            display: block;
+        }
+        .errors .card {
+            border-style: solid;
+            border-width: medium;
+            border-color: red;
+        }
+    </style>
+
+    <template>
+
+        <div>
+            <paper-toast id="toast" class="fit-top" text="{{errorMessage}}"> </paper-toast>
+        </div>
+
+        <div id="field_wrapper" class="errors">
+            <content id="fields" ></content>
+        </div>
+
+    </template>
+
+	<script>
+        (function() {
+			Polymer({
+				is: 'meta4-form',
+
+				properties: {
+				    item: { type: Object, value: {}},
+                    valid: { type: Boolean, value: true },
+                    errorMessage: { type: String, value: "some details are invalid" },
+                    errors: { type: Object, value: {}, notify: true }
+				},
+
+                ready: function() {
+				    var self = this;
+                    this.addEventListener('invalid', function(event) {
+                        console.log("invalid-form: %o", arguments)
+                        event.preventDefault();
+                    });
+                    this.$.toast.open();
+                    this.autoValidate && this.validate();
+
+                },
+
+                validate: function(rules) {
+                    var self = this;
+                    var form$ = this.getContentChildren("#fields");
+                    var field$ = $("[name]", form$);
+                    var deep$ = $("meta4-form", form$);
+                    console.log("validating: %o -> %o -> %o -> %o", this.item, form$, field$, deep$);
+
+                    var _errors = {};
+                    field$.each(function (ignore, field) {
+                        field.validate && field.validate();
+                        if (field.invalid) {
+                            _errors[field.name] = field;
+                        }
+                    });
+
+                    return new Promise(function (resolve, reject) {
+                        var _valid = _.isEmpty(_errors);
+                        self.set("valid", _valid );
+                        self.$.field_wrapper.classList.toggle("errors", !_valid);
+
+                        console.log("validated: %o %o -> %o = %o", self.item, _errors, _valid, self.valid);
+
+                        if (_valid) {
+                            self.set("errors", _errors);
+                            self.fire("invalid", _errors);
+                            self.$.toast.open();
+
+                            resolve.apply(self, [ _errors, field$ ]);
+
+                        } else {
+                            self.fire("valid");
+                            reject.apply(self, [ _errors, field$ ]);
+                        }
+                    });
+                },
+
+                submit: function() {
+                    var self = this;
+
+                    this.validate().then(function() {
+                        self.fire("submit");
+                    }).catch(function() {
+                        // do nothing
+                    })
+                }
+			});
+		}());
+	</script>
+</dom-module>

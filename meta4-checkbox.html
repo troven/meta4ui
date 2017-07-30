@@ -1,0 +1,33 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-checkbox/paper-checkbox.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="meta4-checkbox">
+    <template>
+
+        <paper-checkbox id="_checkbox" name="{{name}}" on-tap="toggled" value="{{checked}}">{{label}}&nbsp;</paper-checkbox>
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-checkbox',
+                properties: {
+                    checked: { type: String, value: "on", notify: true },
+                    value: { type: Boolean, value: true, notify: true},
+                },
+                ready: function() {
+                    // always try to tick the box ... unless explictly set a false value or default attribute to set false
+                    this.$._checkbox.checked = this.value?true:(this.value===false?false:(this.default===false?false:true) );
+                    this.toggled();
+                },
+                toggled: function() {
+                    var value = this.$._checkbox.checked?true:false;
+                    console.log("toggled: %o -> %o", this.name, value);
+                    this.set("value", value);
+                }
+            });
+        }());
+    </script>
+</dom-module>

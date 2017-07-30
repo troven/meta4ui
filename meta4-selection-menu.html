@@ -1,0 +1,111 @@
+<link rel="import" href="/bower_components/polymer/polymer.html">
+<link rel="import" href="/bower_components/paper-item/paper-item.html">
+<link rel="import" href="/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="/bower_components/paper-dropdown-menu/paper-dropdown-menu.html">
+
+<dom-module id="meta4-selection-menu">
+    <style>
+        :host {
+            display: block;
+            padding: 0px;
+        }
+    </style>
+    <template>
+
+        <meta4-crud-api id="api" debug url="{{url}}" token="{{token}}" data-source="{{items}}"></meta4-crud-api>
+
+        <span>
+            <paper-dropdown-menu id="menu" disabled name="[[name]]" required label="[[label]]" tooltip="[[tooltip]]" >
+                <paper-listbox class="dropdown-content" selected="{{selection}}">
+                    <template is="dom-repeat" items="{{selections}}">
+                        <paper-item>{{item.Name}}</paper-item>
+                    </template>
+                </paper-listbox>
+            </paper-dropdown-menu>
+            <paper-icon-button on-tap='refresh' icon="refresh">[x]</paper-icon-button>
+        </span>
+
+    </template>
+
+    <script>
+        (function() {
+            Polymer({
+                is: 'meta4-selection-menu',
+                properties: {
+                    selections: { type: Array, notify: true, value: [], observer: "selectionsChanged"  },
+                    idProperty: { type: String, value: "_id" },
+                    url: { type: Object, notify: true, observer: "urlChanged"  },
+                    items: { type: Object, notify: true, observer: "itemsChanged"  },
+                    item: { type: Object, value: {}, notify: true, observer: "itemChanged" },
+                    selection: { type: Number, value: 0, notify: true, observer: "selectionChanged" },
+                    debug: { type: Boolean, value: true }
+                },
+
+                ready: function() {
+                    this.valueProperty  = this.valueProperty || false;
+                    this.debug && console.log("meta4-selection-menu: %o -> %o", this.name, this.item);
+                },
+
+                refresh: function() {
+                    var self = this;
+                    this.$.api.read().then(function(items) {
+                        self.$.menu.removeAttribute("disabled");
+                        // console.log("refreshed: %o -> %o", self.items, items );
+                        self.items.refresh(items);
+                        self.set("selections", items);
+                    })
+                },
+
+                urlChanged: function() {
+                    console.log("urlChanged: %o", arguments);
+                    this.$.api.read();
+                },
+
+                itemChanged: function(item) {
+                    // console.log("itemChanged: %o -> %o", this.item, item);
+                    if (!this.items || !this.items.length) {
+                        this.refresh();
+                    }
+                    this.updateSelection();
+                },
+
+                selectionChanged: function() {
+                    // console.log("selectionChanged: %o", arguments);
+                    this.changeSelection();
+                },
+
+                selectionsChanged: function() {
+                    // console.log("selectionsChanged: %o", arguments);
+                    this.updateSelection();
+                },
+
+                itemsChanged: function() {
+                    // console.log("itemsChanged: %o", arguments);
+                    this.updateSelection();
+                },
+
+                updateSelection: function() {
+                    if (!this.item) return;
+                    var selected = this.item[this.name];
+                    // console.log("updateSelection: %o -> %o", arguments, selected);
+                    if (!selected) return;
+                    var id = selected[this.idProperty];
+                    var found = this.items.indexOf(id);
+                    // console.log("set selection: %o -> %o", id, found);
+                    this.set("selection", found );
+                },
+
+                changeSelection: function(index) {
+                    if (!this.items) {
+//                        console.error("missing selectable: %o -> %o -> %o", arguments, this.items, this.selections);
+                        return;
+                    }
+                    index = index || this.selection || 0;
+                    this.item[this.name] = this.items.find(index);
+                    // console.log("changedSelection: %o @ %o -> %o", index, this.selection, this.item);
+                    return;
+                }
+            });
+        }());
+    </script>
+</dom-module>

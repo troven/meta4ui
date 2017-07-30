@@ -1,42 +1,50 @@
 var DataSource = function(opts) {
-    opts = opts || { idProperty: "_key" };
+    var self = this;
 
-    console.log("Data-Source: %s", opts.idProperty);
+    opts = opts || { idProperty: "_id" };
+    this.debug = opts.debug || false;
+
+    this.debug && console.log("Data-Source: %s -> %s", opts.id, opts.idProperty);
 
     var Index = function(data, idProperty) {
         var idx = {};
         if (!data) return idx;
         if (!idProperty) throw "Missing index id";
 
-        for (var key in data) {
-            var v = data[key];
+        for (var i = 0; i < data.length; i++) {
+            var v = data[i];
             var id = v[idProperty];
             idx[id] = v;
         }
+        console.log("index: %s -> %o / %o", idProperty, idx, data);
         return idx;
     }
 
     return {
-        items: [],
-
-        length: 0,
+        items: [], idx: {}, length: 0,
 
         find: function(id) {
-            return this.idx[id] || this.items[id] || false;
+            if (this.idx[id]) return this.idx[id];
+            return this.items[id] || false;
+        },
+
+        indexOf: function(id) {
+            return this.idx[id] || id;
         },
 
         refresh: function(items) {
-            if (!items) {
-                return;
-            }
+            self.debug && console.log("refresh: %s", opts.idProperty);
+            items = items || [];
             if ( !Array.isArray(items) ) {
-                return;
-                // throw new Error("items is "+(typeof items)+" not an array");
+                console.warn("invalid array: %o", items);
+                throw new Error("data-source 'items' of "+(typeof items)+" is not an array");
+                // return;
             }
 
             this.idx = Index(items, opts.idProperty);
             this.items = items;
             this.length = items.length || 0;
+            self.debug && console.log("refreshed: %o x %o items", this.items, this.length);
         },
 
         sort: function(sort) {
