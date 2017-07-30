@@ -108,7 +108,7 @@
 
         </iron-pages>
 
-        <paper-toast id="notifications" text="nothing"></paper-toast>
+        <!--<paper-toast id="notifications" text="nothing"></paper-toast>-->
 	</template>
 
 	<script>
@@ -306,6 +306,7 @@ this.debug && console.log("on-saved: %o", event);
                 },
 
                 toast: function(txt) {
+                    if (!this.$.notifications) return;
                     this.$.notifications.text = txt;
                     this.$.notifications.show();
                 },
