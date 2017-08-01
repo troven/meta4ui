@@ -4,8 +4,6 @@ var DataSource = function(opts) {
     opts = opts || { idProperty: "_id" };
     this.debug = opts.debug || false;
 
-    this.debug && console.log("Data-Source: %s -> %s", opts.id, opts.idProperty);
-
     var Index = function(data, idProperty) {
         var idx = {};
         if (!data) return idx;
@@ -16,7 +14,7 @@ var DataSource = function(opts) {
             var id = v[idProperty];
             idx[id] = v;
         }
-        console.log("index: %s -> %o / %o", idProperty, idx, data);
+        console.log("reindex: %o by %s -> %o", data, idProperty, idx);
         return idx;
     }
 
@@ -44,7 +42,9 @@ var DataSource = function(opts) {
             this.idx = Index(items, opts.idProperty);
             this.items = items;
             this.length = items.length || 0;
-            self.debug && console.log("refreshed: %o x %o items", this.items, this.length);
+
+            // TODO: this seems to be called too often
+//            self.debug && console.log("refreshed: %o x %o items", this.items, this.length);
         },
 
         sort: function(sort) {

@@ -12,18 +12,20 @@
     </style>
     <template>
 
-        <meta4-crud-api id="api" debug url="[[url]]" token="{{token}}" data-source="{{items}}"></meta4-crud-api>
+        <meta4-crud-api id="api" url="[[url]]" debug cached required token="{{token}}" items="{{items}}">
 
-        <span>
-            <paper-dropdown-menu id="menu" disabled name="[[name]]" required=[[required]] auto-validate=[[autoValidate]] label="[[label]]" tooltip="[[tooltip]]" >
-                <paper-listbox class="dropdown-content" selected="{{selection}}">
-                    <template is="dom-repeat" items="{{selections}}">
-                        <paper-item>{{item.Name}}</paper-item>
-                    </template>
-                </paper-listbox>
-            </paper-dropdown-menu>
-            <paper-icon-button on-tap='refresh' icon="refresh">[x]</paper-icon-button>
-        </span>
+            <span>
+                <paper-dropdown-menu id="menu" disabled$="{{!items}}" name="[[name]]" required=[[required]] auto-validate=[[autoValidate]] label="[[label]]" tooltip="[[tooltip]]" >
+                    <paper-listbox class="dropdown-content" selected="{{selection}}">
+                        <template is="dom-repeat" items="{{items}}">
+                            <paper-item>{{item.Name}}</paper-item>
+                        </template>
+                    </paper-listbox>
+                </paper-dropdown-menu>
+                <paper-icon-button on-tap='reload' icon="reload">[x]</paper-icon-button>
+            </span>
+
+        </meta4-crud-api>
 
     </template>
 
@@ -32,7 +34,6 @@
             Polymer({
                 is: 'meta4-selection-menu',
                 properties: {
-                    selections: { type: Array, notify: true, value: [], observer: "selectionsChanged"  },
                     idProperty: { type: String, value: "_id" },
                     url: { type: Object, notify: true, observer: "urlChanged"  },
                     items: { type: Object, notify: true, observer: "itemsChanged"  },
@@ -42,52 +43,40 @@
                 },
 
                 ready: function() {
+                    var self = this;
                     this.valueProperty  = this.valueProperty || false;
-                    this.debug && console.log("meta4-selection-menu: %o -> %o", this.name, this.item);
+                    this.debug && console.log("read: %o -> %o", this.name, this.item);
+                    this.$.menu.addEventListener("blur", function() { self.reload() });
                 },
 
-                refresh: function() {
+                reload: function() {
                     var self = this;
-                    this.$.api.read().then(function(items) {
-                        self.$.menu.removeAttribute("disabled");
-                        // console.log("refreshed: %o -> %o", self.items, items );
-                        self.items.refresh(items);
-                        self.set("selections", items);
-                    })
+                    this.debug && console.log("reload: %o -> %o", this.name, this.my, this.api, this.item );
+                    this.$.api.fire("reload");
                 },
 
                 urlChanged: function() {
-                    console.log("urlChanged: %o", arguments);
-                    this.$.api.read();
+//                    this.debug && console.log("urlChanged: %o", arguments);
                 },
 
                 itemChanged: function(item) {
-                    // console.log("itemChanged: %o -> %o", this.item, item);
-                    if (!this.items || !this.items.length) {
-                        this.refresh();
-                    }
-                    this.updateSelection();
-                },
-
-                selectionChanged: function() {
-                    // console.log("selectionChanged: %o", arguments);
-                    this.changeSelection();
-                },
-
-                selectionsChanged: function() {
-                    // console.log("selectionsChanged: %o", arguments);
-                    this.updateSelection();
+                    this.reflectToSelection();
                 },
 
                 itemsChanged: function() {
                     // console.log("itemsChanged: %o", arguments);
-                    this.updateSelection();
+                    this.reflectToSelection();
                 },
 
-                updateSelection: function() {
-                    if (!this.item) return;
+                selectionChanged: function() {
+                    // console.log("selectionChanged: %o", arguments);
+                    this.reflectToModel();
+                },
+
+                reflectToSelection: function() {
+                    if (!this.item || !this.items) return;
                     var selected = this.item[this.name];
-                    // console.log("updateSelection: %o -> %o", arguments, selected);
+                    // console.log("reflectToSelection: %o -> %o", arguments, selected);
                     if (!selected) return;
                     var id = selected[this.idProperty];
                     var found = this.items.indexOf(id);
@@ -95,14 +84,17 @@
                     this.set("selection", found );
                 },
 
-                changeSelection: function(index) {
+                reflectToModel: function(index) {
                     if (!this.items) {
 //                        console.error("missing selectable: %o -> %o -> %o", arguments, this.items, this.selections);
                         return;
                     }
+                    if (!this.name) {
+                        throw "no name"
+                    }
                     index = index || this.selection || 0;
-                    this.item[this.name] = this.items.find(index);
-                    // console.log("changedSelection: %o @ %o -> %o", index, this.selection, this.item);
+                    console.log("reflectToModel: %o -> %o @ %o -> %o -> %o", index, this.selection, this.name, this.items, this.item);
+                    this.item[this.name] = this.items[index];
                     return;
                 }
             });

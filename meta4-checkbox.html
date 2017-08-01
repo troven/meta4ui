@@ -5,7 +5,7 @@
 <dom-module id="meta4-checkbox">
     <template>
 
-        <paper-checkbox id="_checkbox" name="[[name]]" required=[[required]] auto-validate=[[autoValidate]] on-tap="toggled" value="{{checked}}">{{label}}&nbsp;</paper-checkbox>
+        <paper-checkbox id="checkbox" name="[[name]]" required=[[required]] auto-validate=[[autoValidate]] on-tap="toggled" value="{{value}}">{{label}}&nbsp;</paper-checkbox>
 
     </template>
 
@@ -14,17 +14,15 @@
             Polymer({
                 is: 'meta4-checkbox',
                 properties: {
-                    checked: { type: String, value: "on", notify: true },
                     value: { type: Boolean, value: true, notify: true},
                 },
                 ready: function() {
-                    // always try to tick the box ... unless explictly set a false value or default attribute to set false
-                    this.$._checkbox.checked = this.value?true:(this.value===false?false:(this.default===false?false:true) );
-                    this.toggled();
+                    // try to tick the box ... unless explictly set a false value or false default
+                    this.$.checkbox.checked = this.value?true:(this.value===false?false:(this.default===false?false:true) );
+                    this.set("value", this.$.checkbox.checked);
                 },
                 toggled: function() {
-                    var value = this.$._checkbox.checked?true:false;
-                    console.log("toggled: %o -> %o", this.name, value);
+                    var value = this.$.checkbox.checked?true:false;
                     this.set("value", value);
                 }
             });

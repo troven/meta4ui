@@ -191,7 +191,7 @@ this.debug && console.log("on-saved: %o", event);
                     });
                     that.addEventListener("deleted", function(event) {
                         self.debug && console.log("on-deleted: %o", event);
-                        self.read();
+                        self.reload();
                     });
                 },
 
@@ -215,6 +215,15 @@ this.debug && console.log("on-saved: %o", event);
                     return item || false;
                 },
 
+                reload: function () {
+                    this.master();
+                    this.fire("reload");
+                },
+
+                back: function () {
+                    this.master();
+                },
+
                 create: function () {
                     this.$.crud_pages.selected = "edit";
                     this.item = {};
@@ -233,10 +242,6 @@ this.debug && console.log("on-saved: %o", event);
                     if (item) {
                         this.set("item", item || {} );
                     }
-                },
-
-                back: function () {
-                    this.master();
                 },
 
                 save: function () {
@@ -314,10 +319,6 @@ this.debug && console.log("on-saved: %o", event);
                 onSelect: function (e, selected) {
                     this.debug && console.log("onSelect: %o -> %o", this, selected);
                     this.detail(selected.item);
-                },
-
-                reload: function () {
-                    this.fire("read");
                 },
 
                 itemsChanged: function (items, args) {
