@@ -12,10 +12,10 @@
     </style>
     <template>
 
-        <meta4-crud-api id="api" debug url="{{url}}" token="{{token}}" data-source="{{items}}"></meta4-crud-api>
+        <meta4-crud-api id="api" debug url="[[url]]" token="{{token}}" data-source="{{items}}"></meta4-crud-api>
 
         <span>
-            <paper-dropdown-menu id="menu" disabled name="[[name]]" required label="[[label]]" tooltip="[[tooltip]]" >
+            <paper-dropdown-menu id="menu" disabled name="[[name]]" required=[[required]] auto-validate=[[autoValidate]] label="[[label]]" tooltip="[[tooltip]]" >
                 <paper-listbox class="dropdown-content" selected="{{selection}}">
                     <template is="dom-repeat" items="{{selections}}">
                         <paper-item>{{item.Name}}</paper-item>

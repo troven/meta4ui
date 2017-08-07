@@ -5,7 +5,7 @@
 <dom-module id="meta4-checkbox">
     <template>
 
-        <paper-checkbox id="_checkbox" name="{{name}}" on-tap="toggled" value="{{checked}}">{{label}}&nbsp;</paper-checkbox>
+        <paper-checkbox id="_checkbox" name="[[name]]" required=[[required]] auto-validate=[[autoValidate]] on-tap="toggled" value="{{checked}}">{{label}}&nbsp;</paper-checkbox>
 
     </template>
 

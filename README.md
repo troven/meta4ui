@@ -1,5 +1,3 @@
-Useful, opinionated Web Components
-==================================
-
-TO DO :-)
+Web Components
+==============
 
