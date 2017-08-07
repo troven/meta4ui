@@ -7,6 +7,9 @@
 <script src="/bower_components/zepto/zepto.min.js"></script>
 <script src="/bower_components/lodash/lodash.min.js"></script>
 
+<script src="data-cache.js"></script>
+<script src="data-source.js"></script>
+
 <dom-module id="meta4-crud-api">
     <style>
         :host {
@@ -15,8 +18,12 @@
         }
     </style>
 
-    <script>
+    <!--<app-data key="userData" data="{{me}}"></app-data>-->
+    <!--<iron-ajax id="module_home" auto url="../self" method="get" handle-as="json" last-response="{{module}}"></iron-ajax>-->
 
+    <!--<iron-itemsstorage name="user-storage" value="{{items}}"></iron-itemsstorage>-->
+
+    <script>
 
         (function() {
             var _isEmpty = function(obj) {
@@ -26,43 +33,20 @@
             Polymer({
                 is: 'meta4-crud-api',
                 properties: {
-                    debug: {
-                        type: Boolean,
-                        value: false
-                    },
-                    auto: {
-                        type: Boolean,
-                        value: false
-                    },
-                    url: {
-                        type: String
-                    },
-                    idProperty: {
-                        type: String
-                    },
-                    token: {
-                        notify: true,
-                        type: Object,
-                        readonly: true
-                    },
-                    local: {
-                        notify: true,
-                        type: Object
-                    },
-                    dataSource: {
-                        notify: true,
-                        type: Object
-                    },
-                    xhr: {
-                        type: Object,
-                        notify: true,
-                        readOnly: true
-                    }
+                    debug: { type: Boolean, value: false },
+                    cached: { type: Boolean, value: false  },
+                    url: { type: String },
+                    idProperty: { type: String },
+                    token: { notify: true, type: Object, readonly: true },
+                    items: { notify: true, type: Object },
+                    item: { notify: true, type: Object },
+                    dataSource: { notify: true, type: Object },
+                    xhr: { type: Object, notify: true, readOnly: true }
                 },
                 observers: [
                     "tokenChanged(token)",
                     "urlChanged(url)",
-                    "localDataChanged(local)"
+                    "itemsChanged(items)"
                 ],
                 _sanitizeHeaders: function(headers) {
                     var headers = headers || this.headers;
@@ -71,32 +55,25 @@
                     }
                 },
                 ready: function() {
-                    this.set("local", this.local || [] );
                     this.idProperty = this.idProperty?this.idProperty:"_id";
 
-                    this.dataSource = new DataSource({ id: this.url, idProperty: this.idProperty, debug: this.debug });
-
-                    this.set("dataSource", this.dataSource);
-
-                    console.log("API ready: %o -> %s [%s] -> %o", this.url, this.idProperty?this.idProperty:false, this.auto?"auto":"manual", this.dataSource);
-                    if (this.dataSource && !this.dataSource.refresh) {
-                        throw "DataSource Error";
+                    if (this.cached) {
+                        this.cache = new DataCache(this.url);
+                        console.warn("caching: %o -> %o", this.url);
                     }
 
-                    this.listenForCrudEvents();
-                    this.addEventListener("onfocus", function(event) {
-                        console.log("on-focus");
-                    });
-                    this.addEventListener("focus", function(event) {
-                        console.log("got-focus");
-                    });
+                    var _dataSource = new DataSource({ id: this.url, idProperty: this.idProperty, debug: this.debug, cached: this.cached });
+                    this.set("dataSource", _dataSource);
 
-//                    this.auto && this.read();
+                    this._listenForEvents();
+                    console.log("API ready: [ %o ] -> %o -> %o -> %o", this.id, this.url, this.idProperty?this.idProperty:false, this.cached?"cached":"active");
                 },
 
-                listenForCrudEvents: function(that) {
+                _listenForEvents: function(that) {
                     var self = this;
                     that = that || this;
+
+                    that.addEventListener("reload", function(event) { event.stopPropagation(); self.reload(event.detail); });
 
                     that.addEventListener("create", function(event) { event.stopPropagation(); self.create(event.detail) });
                     that.addEventListener("read", function(event) { event.stopPropagation(); self.read(event.detail) });
@@ -105,36 +82,56 @@
                     that.addEventListener("delete", function(event) { event.stopPropagation(); self.delete(event.detail) });
                 },
 
-                notify: function() {
+                trickle: function() {
                     var self = this;
                     var args = arguments;
                     var children = self.childNodes;
-                    // console.log("notify: %o -> %o", arguments, children);
                     children.forEach(function(child) {
                         child.fire && child.fire.apply(self, args);
                     })
                 },
 
-                localDataChanged: function(items) {
+                itemsChanged: function(items) {
                     if (this.dataSource && this.dataSource.refresh) {
+                        console.log("itemsChanged: %o -> %o -> %o", this.url, items, this.dataSource);
                         this.dataSource.refresh(items);
-                        console.warn("[r]localDataChanged: %s -> %o -> %o", this.url, items, this.dataSource);
-                    } else {
-                        this.set("local", items);
-                        // console.log("[-]localDataChanged: %s -> %o -> %o", this.url, items, this.dataSource);
                     }
                 },
 
                 tokenChanged: function(token) {
-                    // console.log("Token Changed: %o", token);
-                    token && this.auto && this.read();
+                    if (!token) return;
+                    if ( this._reloadTimestamp ) {
+                        console.log("token changed: %o -> %o -> %o", this.url, token);
+                        this.reload();
+                    }
+                    if (this.cached && this.required) {
+                        this.reload();
+                    }
                 },
 
                 urlChanged: function(url) {
-                    this.debug && console.log("URL changed: %o", this.url, url);
-                    url && this.auto && this.read();
+                    //
                 },
 
+                reload: function(model) {
+                    var self = this;
+                    this._reloadTimestamp = Date.now();
+
+                    var items = this.cache && this.cache.get();
+
+                    if (!items) {
+                        console.log("reload: %o = %o -> [%o] -> %o", this.id, this.url, this.token?this.token:"no-token", model);
+                        this.read(model).then(function(items) {
+                            console.log("reloaded: %o = %o -> [%o] -> %o", self.id, self.url, self.token?self.token:"no-token", items);
+                            self.set("items", items );
+                            self.cache && self.cache.set(items);
+                        }).catch(function(e) {
+                            console.error("failed: reload: %o -> %o -> %o ", this.id, this.url, e);
+                        });
+                    } else {
+                        console.log("cached: %o = %o -> %o -> %o", this.id, this.url, items, model);
+                    }
+                },
                 // CRUD
 
                 create: function(model) {
@@ -145,8 +142,8 @@
 
                     requested.then(function(r) {
                         console.log("created: %o -> %o", model, r);
-                        self.notify("saved", r);
-                        self.notify("created", r);
+                        self.trickle("saved", r);
+                        self.trickle("created", r);
                     });
 
                     return requested;
@@ -155,9 +152,11 @@
                 read: function() {
                     var self = this;
                     var requested = this.doGet.apply(this, arguments);
-                    requested.then(function(r) { self.set("local",r) });
+                    requested.then(function(r) {
+                        self.set("items",r);
+                        self.cache && self.cache.set(r);
+                    });
                     return requested;
-
                 },
 
                 update: function(model) {
@@ -168,8 +167,8 @@
 
                     requested.then(function(r) {
                         console.log("updated: %o -> %o", model, r);
-                        self.notify("saved", r);
-                        self.notify("updated", r);
+                        self.trickle("saved", r);
+                        self.trickle("updated", r);
                     });
 
                     return requested;
@@ -183,7 +182,7 @@
 
                     requested.then(function(r) {
                         console.log("deleted: %o -> %o", model, r);
-                        self.notify("deleted", r);
+                        self.trickle("deleted", r);
                     });
 
                     return requested;
@@ -202,7 +201,7 @@
 
                     requested.then(function(r) {
                         console.log("saved: %o -> %o", model, r);
-                        self.notify("saved", r);
+                        self.trickle("saved", r);
                     });
 
                     return requested;
@@ -267,9 +266,9 @@
 
                 doGetMany: function(queryParams) {
                     var self = this;
-                    this.started = new Date().getTime();
+                    var now = new Date().getTime();
 
-                    this.debug && console.log("get-many: %o -> %o -> %o -> %o", this.url, this.token, this.started, queryParams);
+                    this.debug && console.warn("get-many: %o -> %o -> %o -> %o", this.url, this.token, now, queryParams);
                     var request = this.ajaxRequest({ type: "GET", url: this.url, token: this.token, data: queryParams });
                     return request;
                 },
