@@ -1,10 +1,6 @@
 {
   "name": "meta4ui",
-<<<<<<< HEAD
-  "version": "0.5.2",
-=======
   "version": "0.5.8",
->>>>>>> 069590370cdfaa2241b9f36c44e7e6b8160188d6
   "homepage": "https://github.com/troven/meta4ui",
   "authors": [
     "apigeeks<cto@apigeeks.com>"
