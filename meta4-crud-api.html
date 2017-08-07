@@ -99,7 +99,6 @@
                 },
 
                 tokenChanged: function(token) {
-                    if (!token) return;
                     if ( this._reloadTimestamp ) {
                         console.log("token changed: %o -> %o -> %o", this.url, token);
                         this.reload();
@@ -109,11 +108,16 @@
                     }
                 },
 
+                isAuthenticated: function() {
+                    return this.token?true:false;
+                },
+
                 urlChanged: function(url) {
                     //
                 },
 
                 reload: function(model) {
+                    if (!this.isAuthenticated()) return;
                     var self = this;
                     this._reloadTimestamp = Date.now();
 
@@ -131,6 +135,7 @@
                     } else {
                         console.log("cached: %o = %o -> %o -> %o", this.id, this.url, items, model);
                     }
+                    return this;
                 },
                 // CRUD
 
@@ -207,7 +212,7 @@
                     return requested;
                 },
 
-                ajaxRequest: function(cmd) {
+                ajax: function(cmd) {
                     var self = this;
                     var promise = new Promise(function(resolve, reject) {
                         var ajax = { type: cmd.type, url: cmd.url, headers: {} };
@@ -260,7 +265,7 @@
                     var self = this;
                     this.debug && console.log("get-one: %o -> %o", this.url?this.url:"no url", this.token?this.token:"no token");
 
-                    var request = this.ajaxRequest({ type: "GET", url: this.url+id, token: this.token });
+                    var request = this.ajax({ type: "GET", url: this.url+id, token: this.token });
                     return request;
                 },
 
@@ -269,27 +274,27 @@
                     var now = new Date().getTime();
 
                     this.debug && console.warn("get-many: %o -> %o -> %o -> %o", this.url, this.token, now, queryParams);
-                    var request = this.ajaxRequest({ type: "GET", url: this.url, token: this.token, data: queryParams });
+                    var request = this.ajax({ type: "GET", url: this.url, token: this.token, data: queryParams });
                     return request;
                 },
 
                 doPost: function(item) {
                     this.debug && console.log("doPost: %o -> %o -> %o", this.url, this.token, item);
                     item = JSON.stringify(item);
-                    return this.ajaxRequest({ type: "POST", url: this.url, token: this.token, data: item });
+                    return this.ajax({ type: "POST", url: this.url, token: this.token, data: item });
                 },
 
                 doPut: function(item) {
                     this.debug && console.log("doPut: %o -> %o -> %o", this.url, this.token, item);
                     item = JSON.stringify(item);
-                    var requested = this.ajaxRequest({ type: "PUT", url: this.url, token: this.token, dataType: "json", data: item });
+                    var requested = this.ajax({ type: "PUT", url: this.url, token: this.token, dataType: "json", data: item });
                     return requested;
                 },
 
                 doDelete: function(item) {
                     this.debug && console.log("doDelete: %o -> %o -> %o", this.url, this.token, item);
                     item = JSON.stringify(item);
-                    var requested = this.ajaxRequest({ type: "DELETE", url: this.url, token: this.token, data: item });
+                    var requested = this.ajax({ type: "DELETE", url: this.url, token: this.token, data: item });
                     return requested;
                 }
             });

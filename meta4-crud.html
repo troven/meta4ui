@@ -235,10 +235,8 @@ this.debug && console.log("on-saved: %o", event);
                 edit: function (event, index) {
                     this.$.crud_pages.selected = "edit";
                     var id = this.selected[0];
-                    this.debug && console.log("FIX: edit: %s => %o -> %o -> %o", id, this.selected, this.item, arguments);
                     if (typeof id == "undefined") return;
                     var item = this.getSelected(id);
-                    this.debug && console.log("FIX: selected edit: %s => %o", id, item);
                     if (item) {
                         this.set("item", item || {} );
                     }
